@@ -1,27 +1,3 @@
 {
-	"version": 3,
-	"routes": [
-		{
-			"src": "/_app/immutable/.+",
-			"headers": {
-				"cache-control": "public, immutable, max-age=31536000"
-			}
-		},
-		{
-			"handle": "filesystem"
-		},
-		{
-			"src": "^/?(?:/__data.json)?$",
-			"dest": "/"
-		},
-		{
-			"src": "^/api/gifts/?(?:/__data.json)?$",
-			"dest": "/api/gifts"
-		},
-		{
-			"src": "/.*",
-			"dest": "/![-]/catchall"
-		}
-	],
-	"overrides": {}
+  "version": 3
 }
