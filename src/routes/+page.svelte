@@ -21,6 +21,9 @@
 	let reading = $state(false);
 	let readError = $state<string | null>(null);
 	let readOk = $state(false);
+	let fromBrowser = $state(false);
+	let copied = $state(false);
+	let bmAnchor: HTMLAnchorElement | null = $state(null);
 
 	// Formulario
 	let title = $state('');
@@ -90,6 +93,56 @@
 		}
 	}
 
+	// Código del botón de navegador (bookmarklet). Corre en la página del producto,
+	// con la sesión del usuario, y manda los datos ya leídos a esta app.
+	const bookmarklet = $derived(
+		'javascript:(function(){' +
+			'var d=document,' +
+			'g=function(s){return d.querySelector(s)},' +
+			'meta=function(p){var e=g(\'meta[property="\'+p+\'"]\')||g(\'meta[name="\'+p+\'"]\');return e?(e.getAttribute("content")||""):""},' +
+			'txt=function(s){var e=g(s);return e?e.textContent.trim():""},' +
+			'title=meta("og:title")||(g("h1")?g("h1").textContent.trim():d.title),' +
+			'img=meta("og:image")||((g("img")||{}).src||""),' +
+			'price=meta("product:price:amount")||txt("[itemprop=price]")||txt(".andes-money-amount__fraction")||"",' +
+			'cur=meta("product:price:currency")||"",' +
+			'desc=meta("og:description")||meta("description")||"",' +
+			'data={title:title,description:desc.slice(0,400),link:location.href,price:(price?(cur?cur+" "+price:price):""),image_url:img},' +
+			'b64=btoa(unescape(encodeURIComponent(JSON.stringify(data))));' +
+			'window.open("' + page.url.origin + '/#prefill="+encodeURIComponent(b64),"_blank");' +
+		'})();'
+	);
+
+	function copyBookmarklet() {
+		navigator.clipboard.writeText(bookmarklet);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
+
+	// El anchor se arma por JS para que el navegador no sanitice el href "javascript:".
+	$effect(() => {
+		if (bmAnchor) bmAnchor.setAttribute('href', bookmarklet);
+	});
+
+	// Si venimos del botón de navegador, los datos vienen en el hash de la URL.
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const h = window.location.hash;
+		if (!h.startsWith('#prefill=')) return;
+		try {
+			const json = decodeURIComponent(escape(atob(decodeURIComponent(h.slice(9)))));
+			const d = JSON.parse(json);
+			if (d.title) title = d.title;
+			if (d.description) description = d.description;
+			if (d.link) link = d.link;
+			if (d.price) price = d.price;
+			if (d.image_url) imageUrl = d.image_url;
+			fromBrowser = true;
+			history.replaceState(null, '', window.location.pathname);
+		} catch {
+			/* hash inválido: se ignora */
+		}
+	});
+
 	$effect(() => { load(); });
 </script>
 
@@ -98,7 +151,7 @@
 	<p class="font-medium">Soy el dueño de la lista. Para agregá regalos:</p>
 	<ol class="mt-2 list-decimal space-y-1 pl-5">
 		<li>Pegá el link de lo que quieras y tocá <strong>"Leer link"</strong>: se completan solos el título, la foto y el precio.</li>
-		<li>Si el sitio bloquea la lectura, completá los datos a mano. Nada se guarda hasta que toques "Agregar a la lista".</li>
+		<li>Amazon y Mercado Libre bloquean esa lectura. Para esos, usá el <strong>botón de navegador</strong> de abajo.</li>
 		<li>El link de esta página es el que le mandás a la familia: cualquiera puede ver la lista, solo vos agregás.</li>
 	</ol>
 </div>
@@ -125,7 +178,11 @@
 		</button>
 	</div>
 
-	{#if readOk}
+	{#if fromBrowser}
+		<p class="mb-3 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+			Datos cargados desde el navegador. Revisalos y corregí lo que haga falta.
+		</p>
+	{:else if readOk}
 		<p class="mb-3 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
 			Datos leídos del link. Revisalos y corregí lo que haga falta.
 		</p>
@@ -189,6 +246,36 @@
 		{creating ? 'Agregando...' : 'Agregar a la lista'}
 	</button>
 </form>
+
+<!-- Botón de navegador para tiendas que bloquean la lectura (Amazon, Mercado Libre) -->
+<details class="mt-4 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+	<summary class="cursor-pointer font-medium">
+		¿Es de Amazon o Mercado Libre? Usá el botón de navegador
+	</summary>
+	<p class="mt-2 text-slate-600">
+		Esas tiendas bloquean la lectura automática desde el servidor, pero no desde tu propio navegador.
+		Instalá el botón una sola vez y después, en la página del producto, tocá el botón y se carga solo.
+	</p>
+	<ol class="mt-2 list-decimal space-y-1 pl-5 text-slate-600">
+		<li>Arrastrá este enlace a la barra de marcadores (o copiá el código y creá un marcador nuevo con ese contenido):
+			<span class="ml-1 inline-block">
+				<a bind:this={bmAnchor} class="cursor-move rounded bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white no-underline" onclick={(e) => e.preventDefault()}>Leer regalo</a>
+			</span>
+		</li>
+		<li>Abrí el producto en Amazon o Mercado Libre.</li>
+		<li>Tocá el marcador <strong>"Leer regalo"</strong>: se abre esta página con los datos cargados.</li>
+	</ol>
+	<div class="mt-2 flex items-center gap-2">
+		<button
+			type="button"
+			class="rounded bg-white px-2 py-1 text-xs ring-1 ring-slate-300 hover:bg-slate-50"
+			onclick={copyBookmarklet}
+		>
+			{copied ? 'Copiado' : 'Copiar código'}
+		</button>
+		<span class="text-xs text-slate-500">Pegalo como dirección del marcador a mano.</span>
+	</div>
+</details>
 
 <!-- Lista -->
 <h2 class="mt-6 text-lg font-semibold">Mi lista de regalos ({gifts.length})</h2>
