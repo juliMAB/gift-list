@@ -4,7 +4,7 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "sveltekit",
-  "regions": ["gru"],
+  "regions": ["gru1"],
   "headers": [
     {
       "source": "/(.*)",

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { supabase } from '$lib/db/supabase';
 	import GiftCard from '$lib/components/GiftCard.svelte';
 
@@ -235,7 +236,7 @@
 <div class="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm">
 	<p class="font-medium text-indigo-900">Link público de la lista:</p>
 	<div class="mt-1 flex items-center gap-2">
-		<code class="flex-1 truncate rounded bg-white px-2 py-1 text-xs">{location.origin}</code>
+		<code class="flex-1 truncate rounded bg-white px-2 py-1 text-xs">{page.url.origin}</code>
 		<button onclick={copyLink} class="rounded bg-white px-2 py-1 text-xs hover:bg-indigo-100">Copiar</button>
 	</div>
 	<p class="mt-1 text-xs text-indigo-700">Mandá ese link a tu familia. Ellos pueden ver todo, pero solo vos podés agregar regalos.</p>

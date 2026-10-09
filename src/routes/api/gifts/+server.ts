@@ -10,7 +10,7 @@ export async function GET() {
 	return json(data);
 }
 
-export async function POST(request: Request) {
+export async function POST({ request }: { request: Request }) {
 	const body = await request.json();
 	const { title, description, link, price, image_url } = body;
 
