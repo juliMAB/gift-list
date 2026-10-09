@@ -18,10 +18,9 @@
 	let loading = $state(true);
 	let creating = $state(false);
 	let error = $state<string | null>(null);
-	let readMode = $state(false);
-	let readUrl = $state('');
-	let readText = $state('');
-	const READ_PLACEHOLDER = 'Ej: { title: "...", price: "...", description: "..." }';
+	let reading = $state(false);
+	let readError = $state<string | null>(null);
+	let readOk = $state(false);
 
 	// Formulario
 	let title = $state('');
@@ -60,28 +59,34 @@
 	}
 
 	function copyLink() {
-		navigator.clipboard.writeText(location.origin);
+		navigator.clipboard.writeText(page.url.origin);
 	}
 
-	function startReading() {
-		readMode = true;
-		readUrl = link;
-		readText = '';
-	}
-
-	function submitRead() {
-		readMode = false;
-	}
-
-	function autocompletar() {
+	async function readLink() {
+		if (!link) {
+			error = 'Pegá primero el link del producto.';
+			return;
+		}
+		reading = true;
+		readError = null;
+		readOk = false;
+		error = null;
 		try {
-			const obj = JSON.parse(readText);
-			if (obj.title) title = obj.title;
-			if (obj.description) description = obj.description;
-			if (obj.price) price = obj.price;
-			error = null;
+			const res = await fetch(`/api/read-link?url=${encodeURIComponent(link)}`);
+			const data = await res.json();
+			if (!res.ok) {
+				readError = data.error || 'No pude leer ese link.';
+			} else {
+				if (data.title) title = data.title;
+				if (data.description) description = data.description;
+				if (data.price) price = data.price;
+				if (data.image_url) imageUrl = data.image_url;
+				readOk = true;
+			}
 		} catch {
-			error = 'No se entendió el formato. Pegá un JSON con title / description / price (o completalo manualmente).';
+			readError = 'No pude leer ese link.';
+		} finally {
+			reading = false;
 		}
 	}
 
@@ -92,8 +97,8 @@
 <div class="mb-4 rounded-lg border border-slate-200 bg-white p-3 text-sm">
 	<p class="font-medium">Soy el dueño de la lista. Para agregá regalos:</p>
 	<ol class="mt-2 list-decimal space-y-1 pl-5">
-		<li>Pegá el link de lo que quieras y completá los datos de abajo.</li>
-		<li>Querés que la IA lea el link? Usá el botón <strong>"Leer link con IA"</strong>: le das al link y pegás lo que Chopy te devuelva.</li>
+		<li>Pegá el link de lo que quieras y tocá <strong>"Leer link"</strong>: se completan solos el título, la foto y el precio.</li>
+		<li>Si el sitio bloquea la lectura, completá los datos a mano. Nada se guarda hasta que toques "Agregar a la lista".</li>
 		<li>El link de esta página es el que le mandás a la familia: cualquiera puede ver la lista, solo vos agregás.</li>
 	</ol>
 </div>
@@ -110,58 +115,29 @@
 			value={link}
 			oninput={(e) => link = (e.target as HTMLInputElement).value}
 		/>
-		{#if !readMode}
-			<button
-				type="button"
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-				onclick={startReading}
-			>
-				Leer link con IA
-			</button>
-		{/if}
+		<button
+			type="button"
+			disabled={reading}
+			class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+			onclick={readLink}
+		>
+			{reading ? 'Leyendo...' : 'Leer link'}
+		</button>
 	</div>
 
-	{#if readMode}
-		<div class="mb-3 rounded-md bg-slate-100 p-3">
-			<p class="text-xs text-slate-500">Este link se lo enviaste a Chopy para que lo lea:</p>
-			<p class="break-all font-mono text-sm">{readUrl}</p>
-		</div>
-		<div class="mb-3">
-			<label class="block text-xs font-medium text-slate-700">Datos que te devolvió Chopy</label>
-			<textarea
-				class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-				rows="4"
-				placeholder={READ_PLACEHOLDER}
-				oninput={(e) => readText = (e.target as HTMLTextAreaElement).value}
-			></textarea>
-			<p class="mt-1 text-xs text-slate-500">Cuando Chopy te devuelva los datos, copiálos acá. Si vienen en formato JSON, usá el botón de autocompletar.</p>
-		</div>
-		<div class="mb-3 flex gap-2">
-			<button
-				type="button"
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-				onclick={autocompletar}
-			>
-				Autocompletar desde JSON
-			</button>
-			<button
-				type="button"
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-				onclick={submitRead}
-			>
-				Continuar completando
-			</button>
-			<button
-				type="button"
-				class="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium hover:bg-slate-200"
-				onclick={() => { readMode = false; link = ''; readText = ''; }}
-			>
-				Cancelar
-			</button>
-		</div>
-	{:else}
-		<div class="mb-3">
-			<label class="block text-xs font-medium text-slate-700">Título</label>
+	{#if readOk}
+		<p class="mb-3 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+			Datos leídos del link. Revisalos y corregí lo que haga falta.
+		</p>
+	{/if}
+	{#if readError}
+		<p class="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+			{readError} Completá los datos a mano.
+		</p>
+	{/if}
+
+	<div class="mb-3">
+		<label class="block text-xs font-medium text-slate-700">Título</label>
 			<input
 				type="text"
 				placeholder="Ej: Auriculares Sony WH-1000XM5"
@@ -200,7 +176,6 @@
 				oninput={(e) => imageUrl = (e.target as HTMLInputElement).value}
 			/>
 		</div>
-	{/if}
 
 	{#if error}
 		<p class="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
