@@ -11,6 +11,7 @@
 		price: string;
 		image_url: string;
 		status: 'available' | 'reserved' | 'purchased';
+		reserved_by?: string | null;
 		created_at: string;
 	}
 
@@ -99,7 +100,7 @@
 	<ol class="mt-2 list-decimal space-y-1 pl-5">
 		<li>Pegá el link de lo que quieras y tocá <strong>"Leer link"</strong>: se completan solos el título, la foto y el precio.</li>
 		<li>Amazon y Mercado Libre bloquean esa lectura. Para esos, instalá la <strong>extensión</strong> de abajo.</li>
-		<li>El link de esta página es el que le mandás a la familia: cualquiera puede ver la lista, solo vos agregás.</li>
+		<li>El link de esta página es el que le mandás a la familia: cualquiera puede ver la lista y marcar <strong>"Yo lo compro"</strong> para que otro no lo compre de nuevo.</li>
 	</ol>
 </div>
 
@@ -226,7 +227,7 @@
 {:else}
 	<div class="mt-4 grid gap-4">
 		{#each gifts as gift (gift.id)}
-			<GiftCard {...gift} />
+			<GiftCard {...gift} onchange={load} />
 		{/each}
 	</div>
 {/if}
@@ -238,5 +239,5 @@
 		<code class="flex-1 truncate rounded bg-white px-2 py-1 text-xs">{page.url.origin}</code>
 		<button onclick={copyLink} class="rounded bg-white px-2 py-1 text-xs hover:bg-indigo-100">Copiar</button>
 	</div>
-	<p class="mt-1 text-xs text-indigo-700">Mandá ese link a tu familia. Ellos pueden ver todo, pero solo vos podés agregar regalos.</p>
+	<p class="mt-1 text-xs text-indigo-700">Mandá ese link a tu familia. Ellos pueden ver todo y marcar quién compra cada regalo. Solo vos podés agregar regalos.</p>
 </div>
