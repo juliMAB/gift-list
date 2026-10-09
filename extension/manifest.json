@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Leer regalo → Mi lista",
+  "version": "1.0.0",
+  "description": "Toma titulo, foto y precio del producto que estas viendo y lo agrega a tu lista de regalos.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://*.supabase.co/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Leer regalo"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
